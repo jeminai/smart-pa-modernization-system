@@ -1,49 +1,54 @@
 #!/bin/bash
 
-# Smart PA Modernization System Installer Script
-# Runs on any Ubuntu system with internet access
+# Updated Smart PA Installer — No GitHub clone
 
 set -e
 
 echo "=== Updating system ==="
 sudo apt update && sudo apt upgrade -y
 
-echo "=== Installing Dependencies ==="
-sudo apt install -y python3 python3-pip python3-venv git nodejs npm nginx
-
-# Optional: install bluetooth utilities if handling Bluetooth audio switching
-sudo apt install -y pulseaudio pulseaudio-module-bluetooth bluez
+echo "=== Installing system dependencies ==="
+sudo apt install -y python3 python3-pip python3-venv nodejs npm nginx pulseaudio pulseaudio-module-bluetooth bluez
 
 echo "=== Setting up project directory ==="
 mkdir -p ~/smartpa
 cd ~/smartpa
 
-echo "=== Cloning Smart PA repository ==="
-git clone https://github.com/YOURUSERNAME/smartpa.git .
-# You should replace YOURUSERNAME with your actual GitHub username once you have repo.
+# Optional: Placeholders to remind user to copy project files here manually
+echo ">>> Place your backend/, frontend/, and deploy/ folders here manually if not already present."
 
 echo "=== Setting up Python virtual environment ==="
 python3 -m venv venv
 source venv/bin/activate
 
-echo "=== Installing Python backend dependencies ==="
-pip install -r backend/requirements.txt
+if [ -f backend/requirements.txt ]; then
+    echo "=== Installing Python backend dependencies ==="
+    pip install -r backend/requirements.txt
+else
+    echo "!!! No backend/requirements.txt found, skipping Python dependencies."
+fi
 
-echo "=== Installing and Building Frontend ==="
-cd frontend
-npm install
-npm run build
-cd ..
+if [ -f frontend/package.json ]; then
+    echo "=== Installing frontend dependencies and building ==="
+    cd frontend
+    npm install
+    npm run build
+    cd ..
+else
+    echo "!!! No frontend/package.json found, skipping frontend build."
+fi
 
-echo "=== Setting up Nginx to serve frontend ==="
-sudo cp deploy/nginx_smartpa.conf /etc/nginx/sites-available/smartpa
-sudo ln -s /etc/nginx/sites-available/smartpa /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
+if [ -f deploy/nginx_smartpa.conf ]; then
+    echo "=== Configuring nginx ==="
+    sudo cp deploy/nginx_smartpa.conf /etc/nginx/sites-available/smartpa
+    sudo ln -sf /etc/nginx/sites-available/smartpa /etc/nginx/sites-enabled/
+    sudo nginx -t && sudo systemctl restart nginx
+else
+    echo "!!! No nginx config found. Skipping nginx setup."
+fi
 
 echo "=== Creating systemd service ==="
 
-# Write systemd unit file
 cat <<EOF | sudo tee /etc/systemd/system/smartpa.service
 [Unit]
 Description=Smart PA Backend Service
@@ -60,10 +65,10 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-echo "=== Enabling and starting Smart PA service ==="
+echo "=== Enabling and starting Smart PA systemd service ==="
 sudo systemctl daemon-reload
 sudo systemctl enable smartpa
 sudo systemctl start smartpa
 
-echo "=== Installation Complete! ==="
-echo "Access your Smart PA Modernizer by visiting http://your-device-ip in your browser."
+echo "=== Setup Complete ==="
+echo "Visit: http://<your-device-ip> to access the Smart PA Web UI"
